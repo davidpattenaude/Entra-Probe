@@ -17,9 +17,11 @@ jobs:
           - runner: windows-latest
             rid: win-x64
             artifact_name: release-win-x64
+            publish_single_file: false
           - runner: macos-latest
             rid: osx-arm64
             artifact_name: release-osx-arm64
+            publish_single_file: true
     permissions:
       contents: read
     runs-on: ${{ matrix.runner }}
@@ -43,13 +45,13 @@ jobs:
       - name: Test
         run: dotnet test ./EntraProbe.sln -c Release --no-build
 
-      - name: Publish self-contained single-file executable
+      - name: Publish release artifact
         run: >
           dotnet publish ./src/EntraProbe/EntraProbe.csproj
           -c Release
           -r ${{ matrix.rid }}
           --self-contained true
-          /p:PublishSingleFile=true
+          /p:PublishSingleFile=${{ matrix.publish_single_file }}
           -o ./artifacts/release/${{ matrix.rid }}/publish
 
       - name: Stage release package

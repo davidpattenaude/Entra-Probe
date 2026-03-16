@@ -29,8 +29,8 @@ This document is for day-two ownership of `EntraProbe` by IT Operations, endpoin
 
 ## Recommended Packaging Approach
 
-- Windows enterprise deployment: publish self-contained `win-x64`
-- macOS enterprise deployment: publish self-contained `osx-arm64`
+- Windows enterprise deployment: publish self-contained `win-x64` with `PublishSingleFile=false`
+- macOS enterprise deployment: publish self-contained `osx-arm64` and use `PublishSingleFile=true` if a single-file artifact is preferred
 - Keep tenant-specific logic in the wrapper script, not in the executable
 - Keep `appsettings.json` optional; prefer CLI arguments or environment variables in managed deployments
 

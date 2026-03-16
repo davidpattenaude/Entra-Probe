@@ -143,20 +143,20 @@ dotnet publish ./src/EntraProbe/EntraProbe.csproj \
   -o ./artifacts/publish/osx-arm64-framework
 ```
 
-### Self-Contained Single-File Publish
+### Self-Contained Publish
 
-Windows x64:
+Windows x64 self-contained directory publish:
 
 ```powershell
 dotnet publish .\src\EntraProbe\EntraProbe.csproj `
   -c Release `
   -r win-x64 `
   --self-contained true `
-  /p:PublishSingleFile=true `
+  /p:PublishSingleFile=false `
   -o .\artifacts\publish\win-x64
 ```
 
-macOS arm64:
+macOS arm64 self-contained single-file publish:
 
 ```bash
 dotnet publish ./src/EntraProbe/EntraProbe.csproj \
@@ -170,9 +170,10 @@ dotnet publish ./src/EntraProbe/EntraProbe.csproj \
 ### Deployment Tradeoffs
 
 - Framework-dependent: smaller package, requires a matching .NET runtime on the target device.
-- Self-contained single-file: larger package, simpler enterprise deployment and packaging.
+- Self-contained directory publish: larger package, but avoids the Windows single-file apphost bundle and its embedded `RT_RCDATA` resource.
+- Self-contained single-file: simplest packaging on platforms where the bundled executable is acceptable.
 
-For managed platforms, the self-contained publish is usually the better operational choice.
+For managed Windows platforms, the self-contained directory publish is the safer operational default when AV tooling is sensitive to packed executables.
 
 ## Running the Tool
 
@@ -284,7 +285,7 @@ These wrappers:
 
 - Run `EntraProbe` in user context when you need delegated Microsoft Graph `/me`.
 - Avoid `SYSTEM` context for detection or remediation if the goal is to read the signed-in user's attribute.
-- Prefer the self-contained Windows x64 publish for packaging.
+- Prefer the self-contained Windows x64 directory publish for packaging.
 - Keep any tenant-specific branching logic in the PowerShell wrapper, not in the executable.
 
 ### Intune User-Context Deployment
@@ -400,7 +401,7 @@ exit $exitCode
 Two workflows are included:
 
 - [ci.yml](/Users/david/Documents/Identity/.github/workflows/ci.yml): runs on `push` and `pull_request`, restores, builds, tests, performs a framework-dependent publish for Windows x64 and macOS arm64, stages the publish output with `README.md` and `appsettings.json.example`, and uploads one workflow artifact per platform.
-- [release.yml](/Users/david/Documents/Identity/.github/workflows/release.yml): runs on semantic version tags such as `v1.0.0`, restores, builds, tests, performs a self-contained single-file publish for Windows x64 and macOS arm64, stages the package with `README.md` and `appsettings.json.example`, creates one zip per platform, ensures the GitHub Release exists for the tag, and uploads both zip assets.
+- [release.yml](/Users/david/Documents/Identity/.github/workflows/release.yml): runs on semantic version tags such as `v1.0.0`, restores, builds, tests, performs a self-contained directory publish for Windows x64 and a self-contained single-file publish for macOS arm64, stages the package with `README.md` and `appsettings.json.example`, creates one zip per platform, ensures the GitHub Release exists for the tag, and uploads both zip assets.
 
 ### CI Artifacts
 
@@ -480,6 +481,7 @@ For routine maintenance, deployment, and incident response guidance, use [OPERAT
 
 - `This tool must run in an interactive user session`: launch it in the signed-in user's session, not as `SYSTEM`.
 - `This tool is supported on Windows and macOS only.`: use the Windows or macOS build. Linux is intentionally unsupported.
+- Windows AV flags on the release EXE: use the Windows self-contained directory publish or release asset. The project intentionally avoids Windows single-file bundling to reduce `RT_RCDATA`-style false positives.
 - `Missing required tenant ID` or `Missing required client ID`: provide valid GUID values through CLI, environment variables, or `appsettings.json`.
 - `Missing value for --tenant-id`, `--client-id`, or `--property`: correct the CLI invocation. The tool rejects incomplete switches instead of falling back to defaults.
 - `Unknown argument: ...`: remove the unsupported switch or positional argument. The tool accepts named options only.

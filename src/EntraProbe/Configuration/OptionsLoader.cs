@@ -18,20 +18,24 @@ public static class OptionsLoader
     {
         var defaults = appSettings ?? new RawOptions();
         var commandLine = ParseArguments(args);
+        var environmentValues = environment ?? EmptyEnvironment;
 
         // Keep wrapper behavior predictable: the most explicit call-site input wins.
         var merged = new RawOptions
         {
-            TenantId = FirstNonEmpty(commandLine.TenantId, GetEnvironment(environment, "ENTRA_TENANT_ID"), defaults.TenantId),
-            ClientId = FirstNonEmpty(commandLine.ClientId, GetEnvironment(environment, "ENTRA_CLIENT_ID"), defaults.ClientId),
-            Property = FirstNonEmpty(commandLine.Property, GetEnvironment(environment, "ENTRA_PROPERTY"), defaults.Property),
-            Verbose = commandLine.Verbose || (GetBooleanEnvironment(environment, "ENTRA_VERBOSE") ?? defaults.Verbose),
-            ShowHelp = commandLine.ShowHelp || (GetBooleanEnvironment(environment, "ENTRA_HELP") ?? defaults.ShowHelp),
+            TenantId = FirstNonEmpty(commandLine.TenantId, GetEnvironment(environmentValues, "ENTRA_TENANT_ID"), defaults.TenantId),
+            ClientId = FirstNonEmpty(commandLine.ClientId, GetEnvironment(environmentValues, "ENTRA_CLIENT_ID"), defaults.ClientId),
+            Property = FirstNonEmpty(commandLine.Property, GetEnvironment(environmentValues, "ENTRA_PROPERTY"), defaults.Property),
+            Verbose = commandLine.Verbose || (GetBooleanEnvironment(environmentValues, "ENTRA_VERBOSE") ?? defaults.Verbose),
+            ShowHelp = commandLine.ShowHelp || (GetBooleanEnvironment(environmentValues, "ENTRA_HELP") ?? defaults.ShowHelp),
             ParseError = commandLine.ParseError
         };
 
-        return EffectiveOptions.FromRawOptions(merged);
+        return merged.ToEffectiveOptions();
     }
+
+    private static readonly IReadOnlyDictionary<string, string?> EmptyEnvironment =
+        new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     private static RawOptions LoadAppSettings()
     {
@@ -60,21 +64,45 @@ public static class OptionsLoader
                 case "--tenant-id":
                     if (!TryReadOptionValue(args, ref i, "--tenant-id", out tenantId, out parseError))
                     {
-                        return BuildParsedOptions(tenantId, clientId, property, verbose, showHelp, parseError);
+                        return new RawOptions
+                        {
+                            TenantId = tenantId,
+                            ClientId = clientId,
+                            Property = property,
+                            Verbose = verbose,
+                            ShowHelp = showHelp,
+                            ParseError = parseError
+                        };
                     }
 
                     break;
                 case "--client-id":
                     if (!TryReadOptionValue(args, ref i, "--client-id", out clientId, out parseError))
                     {
-                        return BuildParsedOptions(tenantId, clientId, property, verbose, showHelp, parseError);
+                        return new RawOptions
+                        {
+                            TenantId = tenantId,
+                            ClientId = clientId,
+                            Property = property,
+                            Verbose = verbose,
+                            ShowHelp = showHelp,
+                            ParseError = parseError
+                        };
                     }
 
                     break;
                 case "--property":
                     if (!TryReadOptionValue(args, ref i, "--property", out property, out parseError))
                     {
-                        return BuildParsedOptions(tenantId, clientId, property, verbose, showHelp, parseError);
+                        return new RawOptions
+                        {
+                            TenantId = tenantId,
+                            ClientId = clientId,
+                            Property = property,
+                            Verbose = verbose,
+                            ShowHelp = showHelp,
+                            ParseError = parseError
+                        };
                     }
 
                     break;
@@ -88,11 +116,27 @@ public static class OptionsLoader
                     break;
                 default:
                     parseError = $"Unknown argument: {args[i]}";
-                    return BuildParsedOptions(tenantId, clientId, property, verbose, showHelp, parseError);
+                    return new RawOptions
+                    {
+                        TenantId = tenantId,
+                        ClientId = clientId,
+                        Property = property,
+                        Verbose = verbose,
+                        ShowHelp = showHelp,
+                        ParseError = parseError
+                    };
             }
         }
 
-        return BuildParsedOptions(tenantId, clientId, property, verbose, showHelp, parseError);
+        return new RawOptions
+        {
+            TenantId = tenantId,
+            ClientId = clientId,
+            Property = property,
+            Verbose = verbose,
+            ShowHelp = showHelp,
+            ParseError = parseError
+        };
     }
 
     private static bool TryReadOptionValue(
@@ -120,25 +164,6 @@ public static class OptionsLoader
         return value.StartsWith("-", StringComparison.Ordinal) || value.StartsWith("/", StringComparison.Ordinal);
     }
 
-    private static RawOptions BuildParsedOptions(
-        string? tenantId,
-        string? clientId,
-        string? property,
-        bool verbose,
-        bool showHelp,
-        string? parseError)
-    {
-        return new RawOptions
-        {
-            TenantId = tenantId,
-            ClientId = clientId,
-            Property = property,
-            Verbose = verbose,
-            ShowHelp = showHelp,
-            ParseError = parseError
-        };
-    }
-
     private static Dictionary<string, string?> ReadEnvironment()
     {
         return new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
@@ -156,14 +181,14 @@ public static class OptionsLoader
         return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
     }
 
-    private static string? GetEnvironment(IReadOnlyDictionary<string, string?>? environment, string key)
+    private static string? GetEnvironment(IReadOnlyDictionary<string, string?> environment, string key)
     {
-        return environment is not null && environment.TryGetValue(key, out var value) ? value : null;
+        return environment.TryGetValue(key, out var value) ? value : null;
     }
 
-    private static bool? GetBooleanEnvironment(IReadOnlyDictionary<string, string?>? environment, string key)
+    private static bool? GetBooleanEnvironment(IReadOnlyDictionary<string, string?> environment, string key)
     {
-        if (environment is null || !environment.TryGetValue(key, out var value))
+        if (!environment.TryGetValue(key, out var value))
         {
             return null;
         }

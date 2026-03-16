@@ -56,3 +56,39 @@ public sealed class FakeProfileOutputFormatter : IProfileOutputFormatter
 
     public ProfileOutputSelection Select(EffectiveOptions options, SignedInUserProfile profile) => Selection;
 }
+
+public static class TestOptions
+{
+    public static EffectiveOptions Create(
+        IReadOnlyList<OutputProperty>? properties = null,
+        bool verbose = false,
+        bool showHelp = false,
+        string? tenantId = null,
+        string? clientId = null)
+    {
+        return new EffectiveOptions(
+            tenantId ?? Guid.NewGuid().ToString(),
+            clientId ?? Guid.NewGuid().ToString(),
+            properties ?? [OutputProperty.Department],
+            verbose,
+            showHelp);
+    }
+}
+
+public static class TestApplicationRunner
+{
+    public static ApplicationRunner Create(
+        RecordingConsole console,
+        FakeExecutionContextDetector? contextDetector = null,
+        FakeAuthenticationService? authService = null,
+        FakeGraphProfileService? graphService = null,
+        IProfileOutputFormatter? formatter = null)
+    {
+        return new ApplicationRunner(
+            contextDetector ?? new FakeExecutionContextDetector(),
+            authService ?? new FakeAuthenticationService(),
+            graphService ?? new FakeGraphProfileService(),
+            formatter ?? new ProfileOutputFormatter(),
+            console);
+    }
+}
