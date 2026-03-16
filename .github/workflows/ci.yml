@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            rid: win-x64
+            artifact_name: EntraProbe-ci-win-x64
+          - runner: macos-latest
+            rid: osx-arm64
+            artifact_name: EntraProbe-ci-osx-arm64
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore ./EntraProbe.sln
+
+      - name: Build
+        run: dotnet build ./EntraProbe.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test ./EntraProbe.sln -c Release --no-build
+
+      - name: Publish runnable artifact
+        run: >
+          dotnet publish ./src/EntraProbe/EntraProbe.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained false
+          /p:PublishSingleFile=false
+          -o ./artifacts/ci/${{ matrix.rid }}/publish
+
+      - name: Stage artifact contents
+        shell: bash
+        run: |
+          package_dir="./artifacts/ci/${{ matrix.rid }}/package"
+          mkdir -p "$package_dir"
+          cp -R ./artifacts/ci/${{ matrix.rid }}/publish/. "$package_dir/"
+          cp -R ./scripts "$package_dir/scripts"
+          cp ./README.md "$package_dir/README.md"
+          cp ./appsettings.json.example "$package_dir/appsettings.json.example"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ./artifacts/ci/${{ matrix.rid }}/package
+          if-no-files-found: error
+          retention-days: 14

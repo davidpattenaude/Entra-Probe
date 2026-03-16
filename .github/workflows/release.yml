@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  build-package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            rid: win-x64
+            artifact_name: release-win-x64
+          - runner: macos-latest
+            rid: osx-arm64
+            artifact_name: release-osx-arm64
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore ./EntraProbe.sln
+
+      - name: Build
+        run: dotnet build ./EntraProbe.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test ./EntraProbe.sln -c Release --no-build
+
+      - name: Publish self-contained single-file executable
+        run: >
+          dotnet publish ./src/EntraProbe/EntraProbe.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained true
+          /p:PublishSingleFile=true
+          -o ./artifacts/release/${{ matrix.rid }}/publish
+
+      - name: Stage release package
+        shell: bash
+        run: |
+          tag="${{ github.ref_name }}"
+          rid="${{ matrix.rid }}"
+          package_dir="./artifacts/release/$rid/package"
+          mkdir -p "$package_dir"
+          cp -R "./artifacts/release/$rid/publish/." "$package_dir/"
+          cp -R ./scripts "$package_dir/scripts"
+          cp ./README.md "$package_dir/README.md"
+          cp ./appsettings.json.example "$package_dir/appsettings.json.example"
+          cd "$package_dir"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            powershell -NoProfile -Command "Compress-Archive -Path * -DestinationPath '../EntraProbe-$rid-$tag.zip' -Force"
+          else
+            zip -r "../EntraProbe-$rid-$tag.zip" .
+          fi
+
+      - name: Upload packaged release asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ./artifacts/release/${{ matrix.rid }}/EntraProbe-${{ matrix.rid }}-${{ github.ref_name }}.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  create-release:
+    runs-on: ubuntu-latest
+    needs: build-package
+    permissions:
+      contents: write
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download packaged assets
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts/release/downloads
+
+      - name: Ensure GitHub release exists
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view "${{ github.ref_name }}" >/dev/null 2>&1 || \
+          gh release create "${{ github.ref_name }}" --title "${{ github.ref_name }}" --generate-notes
+
+      - name: Upload release assets
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release upload "${{ github.ref_name }}" \
+            ./artifacts/release/downloads/release-win-x64/EntraProbe-win-x64-${{ github.ref_name }}.zip \
+            ./artifacts/release/downloads/release-osx-arm64/EntraProbe-osx-arm64-${{ github.ref_name }}.zip \
+            --clobber

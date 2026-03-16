@@ -1,0 +1,38 @@
+# Build and publish output
+artifacts/
+bin/
+obj/
+**/bin/
+**/obj/
+
+# Test output
+TestResults/
+**/TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# NuGet packages produced during packing
+*.nupkg
+*.snupkg
+
+# Visual Studio and Rider user state
+.vs/
+*.user
+*.suo
+*.rsuser
+*.userprefs
+
+# VS Code local workspace state
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

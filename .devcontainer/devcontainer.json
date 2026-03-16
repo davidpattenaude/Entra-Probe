@@ -1,0 +1,21 @@
+{
+  "name": "EntraProbe",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0",
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "EditorConfig.EditorConfig",
+        "GitHub.vscode-github-actions"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "EntraProbe.sln",
+        "files.eol": "\n",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "postCreateCommand": "dotnet restore EntraProbe.sln"
+}
