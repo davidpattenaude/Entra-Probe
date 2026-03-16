@@ -22,7 +22,7 @@ public sealed class GraphProfileServiceTests
 
         var service = new GraphProfileService(httpClient);
 
-        var exception = await Assert.ThrowsExceptionAsync<GraphQueryException>(() => service.GetProfileAsync("token", CancellationToken.None));
+        var exception = await TestAssert.ThrowsAsync<GraphQueryException>(() => service.GetProfileAsync("token", CancellationToken.None));
 
         Assert.AreEqual("Microsoft Graph returned an empty response.", exception.Message);
     }
@@ -37,7 +37,7 @@ public sealed class GraphProfileServiceTests
 
         var service = new GraphProfileService(httpClient);
 
-        var exception = await Assert.ThrowsExceptionAsync<GraphQueryException>(() => service.GetProfileAsync("token", CancellationToken.None));
+        var exception = await TestAssert.ThrowsAsync<GraphQueryException>(() => service.GetProfileAsync("token", CancellationToken.None));
 
         Assert.AreEqual("Microsoft Graph query failed: network unavailable.", exception.Message);
     }
@@ -52,7 +52,7 @@ public sealed class GraphProfileServiceTests
 
         var service = new GraphProfileService(httpClient);
 
-        var exception = await Assert.ThrowsExceptionAsync<GraphQueryException>(() => service.GetProfileAsync("token", CancellationToken.None));
+        var exception = await TestAssert.ThrowsAsync<GraphQueryException>(() => service.GetProfileAsync("token", CancellationToken.None));
 
         Assert.AreEqual("Microsoft Graph query failed: request timed out.", exception.Message);
     }
@@ -70,7 +70,7 @@ public sealed class GraphProfileServiceTests
 
         var service = new GraphProfileService(httpClient);
 
-        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => service.GetProfileAsync("token", cancellationTokenSource.Token));
+        await TestAssert.ThrowsAsync<OperationCanceledException>(() => service.GetProfileAsync("token", cancellationTokenSource.Token));
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler

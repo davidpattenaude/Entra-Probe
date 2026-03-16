@@ -43,7 +43,7 @@ public sealed class SilentAccountResolverTests
             new TestAccount("bob@contoso.com")
         };
 
-        var exception = Assert.ThrowsException<AuthenticationException>(() => resolver.Resolve(RuntimePlatform.MacOS, accounts));
+        var exception = TestAssert.Throws<AuthenticationException>(() => resolver.Resolve(RuntimePlatform.MacOS, accounts));
 
         Assert.AreEqual("Authentication failed: multiple cached signed-in accounts are available and the correct macOS account could not be selected silently.", exception.Message);
     }
