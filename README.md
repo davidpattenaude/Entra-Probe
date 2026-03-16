@@ -59,7 +59,7 @@ For the rationale behind delegated user-context authentication, see [DESIGN-NOTE
 3. Record the `Application (client) ID` and `Directory (tenant) ID`.
 4. Under `Authentication`, add the `Mobile and desktop applications` platform.
 5. Add these custom redirect URIs:
-   - `ms-appx-web://microsoft.aad.brokerplugin/<client-id>` for Windows broker support
+   - `ms-appx-web://Microsoft.AAD.BrokerPlugin/<client-id>` for Windows broker support
    - `msauth.com.msauth.unsignedapp://auth` for the unsigned macOS console binary
 6. Enable public client flows.
 7. Under `API permissions`, add Microsoft Graph delegated `User.Read`.
